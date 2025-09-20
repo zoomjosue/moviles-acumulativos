@@ -47,12 +47,12 @@ fun LocationDetailScreen(locationId: Int, onBack: () -> Unit) {
         ) {
             Spacer(Modifier.height(24.dp))
 
-            // Icono grande de la ubicación
+            //Icono
             LocationIcon(type = location.type)
 
             Spacer(Modifier.height(24.dp))
 
-            // Nombre de la ubicación
+            //Nombre
             Text(
                 text = location.name,
                 fontWeight = FontWeight.Bold,
@@ -62,7 +62,7 @@ fun LocationDetailScreen(locationId: Int, onBack: () -> Unit) {
 
             Spacer(Modifier.height(32.dp))
 
-            // Información de la ubicación
+            //Info
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
             ) {

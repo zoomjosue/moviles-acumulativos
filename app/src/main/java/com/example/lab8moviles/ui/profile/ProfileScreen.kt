@@ -45,18 +45,17 @@ fun ProfileScreen(onLogout: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Contenido superior
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Spacer(Modifier.height(32.dp))
 
-                // Imagen de perfil
+                //Imagen Perfil
                 ProfileImage(imageUrl = profileImageUrl, userName = userName)
 
                 Spacer(Modifier.height(24.dp))
 
-                // Información del usuario
+                //Info
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
@@ -84,7 +83,7 @@ fun ProfileScreen(onLogout: () -> Unit) {
 
                 Spacer(Modifier.height(32.dp))
 
-                // Botón de cerrar sesión
+                //Cerrar sesión
                 Button(
                     onClick = onLogout,
                     modifier = Modifier
@@ -118,7 +117,6 @@ fun ProfileImage(imageUrl: String?, userName: String) {
             contentScale = ContentScale.Crop
         )
     } else {
-        // Imagen por defecto si no hay URL
         Box(
             modifier = Modifier
                 .size(120.dp)

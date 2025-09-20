@@ -58,7 +58,6 @@ fun AppNavHost() {
             )
         }
 
-        // Navegación principal con BottomNavigation
         composable<Characters> {
             MainScreen(navController = navController, startDestination = "characters")
         }
