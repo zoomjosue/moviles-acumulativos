@@ -10,3 +10,12 @@ object Characters
 
 @Serializable
 data class CharacterDetail(val characterId: Int)
+
+@Serializable
+object Locations
+
+@Serializable
+data class  LocationDetail(val locationId: Int)
+
+@Serializable
+object Profile
