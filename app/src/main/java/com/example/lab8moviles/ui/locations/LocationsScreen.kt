@@ -8,19 +8,25 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.lab8moviles.data.Location
-import com.example.lab8moviles.data.LocationDb
+import com.example.lab8moviles.ui.components.ErrorScreen
+import com.example.lab8moviles.ui.components.LoadingScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LocationsScreen(onLocationClick: (Int) -> Unit) {
-    val db = LocationDb()
-    val list = db.getAllLocations()
+fun LocationsScreen(
+    onLocationClick: (Int) -> Unit,
+    viewModel: LocationsViewModel = viewModel()
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -33,9 +39,22 @@ fun LocationsScreen(onLocationClick: (Int) -> Unit) {
             )
         }
     ) { padding ->
-        LazyColumn(modifier = Modifier.padding(padding)) {
-            items(list) { location ->
-                LocationListItem(location = location, onClick = onLocationClick)
+        when {
+            uiState.isLoading -> {
+                LoadingScreen()
+            }
+            uiState.hasError -> {
+                ErrorScreen(
+                    errorMessage = "Error al obtener listado de los lugares.\nIntenta de nuevo",
+                    onRetry = { viewModel.loadLocations() }
+                )
+            }
+            else -> {
+                LazyColumn(modifier = Modifier.padding(padding)) {
+                    items(uiState.data) { location ->
+                        LocationListItem(location = location, onClick = onLocationClick)
+                    }
+                }
             }
         }
     }
@@ -69,6 +88,7 @@ fun LocationTypeIcon(type: String, size: androidx.compose.ui.unit.Dp = 48.dp) {
         "resort" -> MaterialTheme.colorScheme.outline
         "fantasy town" -> MaterialTheme.colorScheme.inversePrimary
         "dream" -> MaterialTheme.colorScheme.primaryContainer
+        "cluster" -> MaterialTheme.colorScheme.secondaryContainer
         else -> MaterialTheme.colorScheme.surfaceVariant
     }
 
@@ -80,6 +100,7 @@ fun LocationTypeIcon(type: String, size: androidx.compose.ui.unit.Dp = 48.dp) {
         "resort" -> MaterialTheme.colorScheme.inverseOnSurface
         "fantasy town" -> MaterialTheme.colorScheme.onPrimaryContainer
         "dream" -> MaterialTheme.colorScheme.onPrimaryContainer
+        "cluster" -> MaterialTheme.colorScheme.onSecondaryContainer
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 

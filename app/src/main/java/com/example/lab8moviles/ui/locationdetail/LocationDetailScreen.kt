@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -13,13 +14,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.lab8moviles.data.LocationDb
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.lab8moviles.data.Location
+import com.example.lab8moviles.ui.components.ErrorScreen
+import com.example.lab8moviles.ui.components.LoadingScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LocationDetailScreen(locationId: Int, onBack: () -> Unit) {
-    val db = LocationDb()
-    val location = db.getLocationById(locationId)
+fun LocationDetailScreen(
+    locationId: Int,
+    onBack: () -> Unit,
+    viewModel: LocationDetailViewModel = viewModel()
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -27,7 +35,10 @@ fun LocationDetailScreen(locationId: Int, onBack: () -> Unit) {
                 title = { Text("Location Details") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(painter = painterResource(android.R.drawable.ic_menu_revert), contentDescription = "Back")
+                        Icon(
+                            painter = painterResource(android.R.drawable.ic_menu_revert),
+                            contentDescription = "Back"
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -38,38 +49,60 @@ fun LocationDetailScreen(locationId: Int, onBack: () -> Unit) {
             )
         }
     ) { padding ->
+        when {
+            uiState.isLoading -> {
+                LoadingScreen()
+            }
+            uiState.hasError -> {
+                ErrorScreen(
+                    errorMessage = "Error al obtener información del lugar.\nIntenta de nuevo",
+                    onRetry = { viewModel.loadLocation() }
+                )
+            }
+            uiState.data != null -> {
+                LocationDetailContent(
+                    location = uiState.data!!,
+                    modifier = Modifier.padding(padding)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun LocationDetailContent(
+    location: Location,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(Modifier.height(24.dp))
+
+        LocationIcon(type = location.type)
+
+        Spacer(Modifier.height(24.dp))
+
+        Text(
+            text = location.name,
+            fontWeight = FontWeight.Bold,
+            fontSize = 24.sp,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(Modifier.height(32.dp))
+
         Column(
             modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp)
         ) {
-            Spacer(Modifier.height(24.dp))
-
-            //Icono
-            LocationIcon(type = location.type)
-
-            Spacer(Modifier.height(24.dp))
-
-            //Nombre
-            Text(
-                text = location.name,
-                fontWeight = FontWeight.Bold,
-                fontSize = 24.sp,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(Modifier.height(32.dp))
-
-            //Info
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
-            ) {
-                InfoRow(label = "ID:", value = location.id.toString())
-                InfoRow(label = "Type:", value = location.type)
-                InfoRow(label = "Dimension:", value = location.dimension)
-            }
+            InfoRow(label = "ID:", value = location.id.toString())
+            InfoRow(label = "Type:", value = location.type)
+            InfoRow(label = "Dimension:", value = location.dimension)
         }
     }
 }
@@ -84,6 +117,7 @@ fun LocationIcon(type: String) {
         "resort" -> MaterialTheme.colorScheme.outline
         "fantasy town" -> MaterialTheme.colorScheme.inversePrimary
         "dream" -> MaterialTheme.colorScheme.primaryContainer
+        "cluster" -> MaterialTheme.colorScheme.secondaryContainer
         else -> MaterialTheme.colorScheme.surfaceVariant
     }
 
@@ -95,6 +129,7 @@ fun LocationIcon(type: String) {
         "resort" -> MaterialTheme.colorScheme.inverseOnSurface
         "fantasy town" -> MaterialTheme.colorScheme.onPrimaryContainer
         "dream" -> MaterialTheme.colorScheme.onPrimaryContainer
+        "cluster" -> MaterialTheme.colorScheme.onSecondaryContainer
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 
@@ -117,7 +152,9 @@ fun LocationIcon(type: String) {
 @Composable
 fun InfoRow(label: String, value: String) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 10.dp)
     ) {
         Text(
             text = label,

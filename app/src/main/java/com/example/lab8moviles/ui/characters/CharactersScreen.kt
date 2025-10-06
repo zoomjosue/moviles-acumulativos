@@ -8,21 +8,27 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.lab8moviles.data.Character
-import com.example.lab8moviles.data.CharacterDb
+import com.example.lab8moviles.ui.components.ErrorScreen
+import com.example.lab8moviles.ui.components.LoadingScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CharactersScreen(onCharacterClick: (Int) -> Unit) {
-    val db = CharacterDb()
-    val list = db.getAllCharacters()
+fun CharactersScreen(
+    onCharacterClick: (Int) -> Unit,
+    viewModel: CharactersViewModel = viewModel()
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -35,9 +41,22 @@ fun CharactersScreen(onCharacterClick: (Int) -> Unit) {
             )
         }
     ) { padding ->
-        LazyColumn(modifier = Modifier.padding(padding)) {
-            items(list) { c ->
-                CharacterListItem(character = c, onClick = onCharacterClick)
+        when {
+            uiState.isLoading -> {
+                LoadingScreen()
+            }
+            uiState.hasError -> {
+                ErrorScreen(
+                    errorMessage = "Error al obtener listado de personajes.\nIntenta de nuevo",
+                    onRetry = { viewModel.loadCharacters() }
+                )
+            }
+            else -> {
+                LazyColumn(modifier = Modifier.padding(padding)) {
+                    items(uiState.data) { c ->
+                        CharacterListItem(character = c, onClick = onCharacterClick)
+                    }
+                }
             }
         }
     }

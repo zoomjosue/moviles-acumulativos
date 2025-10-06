@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -14,14 +15,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import com.example.lab8moviles.data.CharacterDb
+import com.example.lab8moviles.data.Character
+import com.example.lab8moviles.ui.components.ErrorScreen
+import com.example.lab8moviles.ui.components.LoadingScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CharacterDetailScreen(characterId: Int, onBack: () -> Unit) {
-    val db = CharacterDb()
-    val character = db.getCharacterById(characterId)
+fun CharacterDetailScreen(
+    characterId: Int,
+    onBack: () -> Unit,
+    viewModel: CharacterDetailViewModel = viewModel()
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -40,37 +48,60 @@ fun CharacterDetailScreen(characterId: Int, onBack: () -> Unit) {
             )
         }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Spacer(Modifier.height(12.dp))
-            if (character.image.isNotBlank()) {
-                AsyncImage(
-                    model = character.image,
-                    contentDescription = character.name,
-                    modifier = Modifier.size(160.dp).clip(CircleShape),
-                    contentScale = ContentScale.Crop
+        when {
+            uiState.isLoading -> {
+                LoadingScreen()
+            }
+            uiState.hasError -> {
+                ErrorScreen(
+                    errorMessage = "Error al obtener información del personaje.\nIntenta de nuevo",
+                    onRetry = { viewModel.loadCharacter() }
                 )
-            } else {
-                Box(
-                    modifier = Modifier.size(160.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(character.name.firstOrNull()?.toString() ?: "?", fontSize = 36.sp)
-                }
             }
-            Spacer(Modifier.height(12.dp))
-            Text(character.name, fontWeight = FontWeight.SemiBold, fontSize = 20.sp)
-            Spacer(Modifier.height(24.dp))
-            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
-                InfoRow(label = "Species:", value = character.species)
-                InfoRow(label = "Status:", value = character.status)
-                InfoRow(label = "Gender:", value = character.gender)
+            uiState.data != null -> {
+                CharacterDetailContent(
+                    character = uiState.data!!,
+                    modifier = Modifier.padding(padding)
+                )
             }
+        }
+    }
+}
+
+@Composable
+fun CharacterDetailContent(
+    character: Character,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(Modifier.height(12.dp))
+        if (character.image.isNotBlank()) {
+            AsyncImage(
+                model = character.image,
+                contentDescription = character.name,
+                modifier = Modifier.size(160.dp).clip(CircleShape),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Box(
+                modifier = Modifier.size(160.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(character.name.firstOrNull()?.toString() ?: "?", fontSize = 36.sp)
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        Text(character.name, fontWeight = FontWeight.SemiBold, fontSize = 20.sp)
+        Spacer(Modifier.height(24.dp))
+        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
+            InfoRow(label = "Species:", value = character.species)
+            InfoRow(label = "Status:", value = character.status)
+            InfoRow(label = "Gender:", value = character.gender)
         }
     }
 }
