@@ -60,6 +60,7 @@ fun LocationsScreen(
     }
 }
 
+//Josué García Barrera
 @Composable
 fun LocationListItem(location: Location, onClick: (Int) -> Unit) {
     Row(

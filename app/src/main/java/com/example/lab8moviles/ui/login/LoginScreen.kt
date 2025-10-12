@@ -6,19 +6,33 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.example.lab8moviles.data.CharacterDb
+import com.example.lab8moviles.data.LocationDb
+import com.example.lab8moviles.data.local.AppDatabase
+import com.example.lab8moviles.data.local.entity.CharacterEntity
+import com.example.lab8moviles.data.local.entity.LocationEntity
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
+// Josué García - 24918
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(onStart: () -> Unit, @DrawableRes logoRes: Int? = null, logoUrl: String? = null) {
+    val context = LocalContext.current
+    val database = remember { AppDatabase.getDatabase(context) }
+    val scope = rememberCoroutineScope()
+    var isLoading by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -58,12 +72,62 @@ fun LoginScreen(onStart: () -> Unit, @DrawableRes logoRes: Int? = null, logoUrl:
                     }
                 }
                 Spacer(Modifier.height(24.dp))
-                Button(
-                    onClick = onStart,
-                    shape = RoundedCornerShape(50),
-                    modifier = Modifier.width(220.dp).height(48.dp)
-                ) {
-                    Text(text = "Entrar")
+
+                if (isLoading) {
+                    CircularProgressIndicator()
+                    Spacer(Modifier.height(16.dp))
+                    Text("Sincronizando datos...", style = MaterialTheme.typography.bodyMedium)
+                } else {
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                isLoading = true
+
+                                // Obtener datos de las clases DB
+                                val characterDb = CharacterDb()
+                                val locationDb = LocationDb()
+
+                                val characters = characterDb.getAllCharacters()
+                                val locations = locationDb.getAllLocations()
+
+                                // Convertir a entidades
+                                val characterEntities = characters.map {
+                                    CharacterEntity(
+                                        id = it.id,
+                                        name = it.name,
+                                        status = it.status,
+                                        species = it.species,
+                                        gender = it.gender,
+                                        image = it.image
+                                    )
+                                }
+
+                                val locationEntities = locations.map {
+                                    LocationEntity(
+                                        id = it.id,
+                                        name = it.name,
+                                        type = it.type,
+                                        dimension = it.dimension
+                                    )
+                                }
+
+                                // Insertar en Room
+                                database.characterDao().insertAll(characterEntities)
+                                database.locationDao().insertAll(locationEntities)
+
+                                // Delay de 4 segundos
+                                delay(4000)
+
+                                isLoading = false
+                                onStart()
+                            }
+                        },
+                        shape = RoundedCornerShape(50),
+                        modifier = Modifier.width(220.dp).height(48.dp),
+                        enabled = !isLoading
+                    ) {
+                        Text(text = "Entrar")
+                    }
                 }
             }
             Text(
