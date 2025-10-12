@@ -11,19 +11,28 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.lab8moviles.data.datastore.UserPreferencesManager
+import com.example.lab8moviles.data.repository.AuthRepository
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(onLogout: () -> Unit) {
+    val context = LocalContext.current
+    val userPreferencesManager = remember { UserPreferencesManager(context) }
+    val authRepository = remember { AuthRepository(userPreferencesManager) }
+    val scope = rememberCoroutineScope()
+
+    val userName by authRepository.userName.collectAsState(initial = "")
+
     val profileImageUrl = "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=400&h=400&fit=crop&crop=face"
-    val userName = "Josué García"
     val userCarnet = "24918"
 
     Scaffold(
@@ -51,7 +60,7 @@ fun ProfileScreen(onLogout: () -> Unit) {
                 Spacer(Modifier.height(32.dp))
 
                 //Imagen Perfil
-                ProfileImage(imageUrl = profileImageUrl, userName = userName)
+                ProfileImage(imageUrl = profileImageUrl, userName = userName ?: "Usuario")
 
                 Spacer(Modifier.height(24.dp))
 
@@ -73,7 +82,7 @@ fun ProfileScreen(onLogout: () -> Unit) {
 
                         Spacer(Modifier.height(16.dp))
 
-                        ProfileInfoRow(label = "Nombre:", value = userName)
+                        ProfileInfoRow(label = "Nombre:", value = userName ?: "No disponible")
 
                         Divider(modifier = Modifier.padding(vertical = 12.dp))
 
@@ -85,7 +94,12 @@ fun ProfileScreen(onLogout: () -> Unit) {
 
                 //Cerrar sesión
                 Button(
-                    onClick = onLogout,
+                    onClick = {
+                        scope.launch {
+                            authRepository.logout()
+                            onLogout()
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp),

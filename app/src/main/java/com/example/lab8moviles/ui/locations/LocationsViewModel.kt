@@ -1,8 +1,10 @@
 package com.example.lab8moviles.ui.locations
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.lab8moviles.data.LocationDb
+import com.example.lab8moviles.data.local.AppDatabase
+import com.example.lab8moviles.data.repository.LocationRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -10,9 +12,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlin.random.Random
 
-class LocationsViewModel : ViewModel() {
+class LocationsViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val locationDb = LocationDb()
+    private val database = AppDatabase.getDatabase(application)
+    private val locationRepository = LocationRepository(database.locationDao())
 
     private val _uiState = MutableStateFlow(LocationsUiState())
     val uiState: StateFlow<LocationsUiState> = _uiState.asStateFlow()
@@ -32,15 +35,23 @@ class LocationsViewModel : ViewModel() {
             val randomNumber = Random.nextInt(1, 11)
 
             if (randomNumber % 2 == 0) {
-                // Par: mostrar datos
-                val locations = locationDb.getAllLocations()
-                _uiState.value = LocationsUiState(
-                    isLoading = false,
-                    data = locations,
-                    hasError = false
-                )
+                //Mostrar datos desde Room
+                try {
+                    val locations = locationRepository.getAllLocations()
+                    _uiState.value = LocationsUiState(
+                        isLoading = false,
+                        data = locations,
+                        hasError = false
+                    )
+                } catch (e: Exception) {
+                    _uiState.value = LocationsUiState(
+                        isLoading = false,
+                        data = emptyList(),
+                        hasError = true
+                    )
+                }
             } else {
-                // Impar: mostrar error
+                //Mostrar error
                 _uiState.value = LocationsUiState(
                     isLoading = false,
                     data = emptyList(),

@@ -1,9 +1,11 @@
 package com.example.lab8moviles.ui.locationdetail
 
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.lab8moviles.data.LocationDb
+import com.example.lab8moviles.data.local.AppDatabase
+import com.example.lab8moviles.data.repository.LocationRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,10 +14,12 @@ import kotlinx.coroutines.launch
 import kotlin.random.Random
 
 class LocationDetailViewModel(
+    application: Application,
     savedStateHandle: SavedStateHandle
-) : ViewModel() {
+) : AndroidViewModel(application) {
 
-    private val locationDb = LocationDb()
+    private val database = AppDatabase.getDatabase(application)
+    private val locationRepository = LocationRepository(database.locationDao())
 
     private val _uiState = MutableStateFlow(LocationDetailUiState())
     val uiState: StateFlow<LocationDetailUiState> = _uiState.asStateFlow()
@@ -38,14 +42,22 @@ class LocationDetailViewModel(
             val randomNumber = Random.nextInt(1, 11)
 
             if (randomNumber % 2 == 0) {
-                // Par: mostrar datos
+                //Mostrar datos desde Room
                 try {
-                    val location = locationDb.getLocationById(locationId)
-                    _uiState.value = LocationDetailUiState(
-                        isLoading = false,
-                        data = location,
-                        hasError = false
-                    )
+                    val location = locationRepository.getLocationById(locationId)
+                    if (location != null) {
+                        _uiState.value = LocationDetailUiState(
+                            isLoading = false,
+                            data = location,
+                            hasError = false
+                        )
+                    } else {
+                        _uiState.value = LocationDetailUiState(
+                            isLoading = false,
+                            data = null,
+                            hasError = true
+                        )
+                    }
                 } catch (e: Exception) {
                     _uiState.value = LocationDetailUiState(
                         isLoading = false,
@@ -54,7 +66,7 @@ class LocationDetailViewModel(
                     )
                 }
             } else {
-                // Impar: mostrar error
+                //Mostrar error
                 _uiState.value = LocationDetailUiState(
                     isLoading = false,
                     data = null,

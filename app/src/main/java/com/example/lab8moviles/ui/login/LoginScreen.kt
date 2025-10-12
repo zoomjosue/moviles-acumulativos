@@ -16,21 +16,26 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.example.lab8moviles.data.CharacterDb
-import com.example.lab8moviles.data.LocationDb
+import com.example.lab8moviles.data.datastore.UserPreferencesManager
 import com.example.lab8moviles.data.local.AppDatabase
-import com.example.lab8moviles.data.local.entity.CharacterEntity
-import com.example.lab8moviles.data.local.entity.LocationEntity
+import com.example.lab8moviles.data.repository.AuthRepository
+import com.example.lab8moviles.data.repository.CharacterRepository
+import com.example.lab8moviles.data.repository.LocationRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-// Josué García - 24918
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(onStart: () -> Unit, @DrawableRes logoRes: Int? = null, logoUrl: String? = null) {
     val context = LocalContext.current
     val database = remember { AppDatabase.getDatabase(context) }
+    val userPreferencesManager = remember { UserPreferencesManager(context) }
+    val authRepository = remember { AuthRepository(userPreferencesManager) }
+    val characterRepository = remember { CharacterRepository(database.characterDao()) }
+    val locationRepository = remember { LocationRepository(database.locationDao()) }
+
     val scope = rememberCoroutineScope()
+    var userName by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -55,6 +60,8 @@ fun LoginScreen(onStart: () -> Unit, @DrawableRes logoRes: Int? = null, logoUrl:
             Spacer(Modifier.height(12.dp))
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Spacer(Modifier.height(60.dp))
+
+                // Logo
                 if (logoRes != null) {
                     Image(
                         painter = painterResource(id = logoRes),
@@ -71,6 +78,22 @@ fun LoginScreen(onStart: () -> Unit, @DrawableRes logoRes: Int? = null, logoUrl:
                         Text("Logo aquí", textAlign = TextAlign.Center)
                     }
                 }
+
+                Spacer(Modifier.height(32.dp))
+
+                // Campo de texto para el nombre
+                OutlinedTextField(
+                    value = userName,
+                    onValueChange = { userName = it },
+                    label = { Text("Nombre") },
+                    placeholder = { Text("Ingresa tu nombre") },
+                    modifier = Modifier
+                        .width(280.dp)
+                        .padding(horizontal = 16.dp),
+                    enabled = !isLoading,
+                    singleLine = true
+                )
+
                 Spacer(Modifier.height(24.dp))
 
                 if (isLoading) {
@@ -80,53 +103,28 @@ fun LoginScreen(onStart: () -> Unit, @DrawableRes logoRes: Int? = null, logoUrl:
                 } else {
                     Button(
                         onClick = {
-                            scope.launch {
-                                isLoading = true
+                            if (userName.isNotBlank()) {
+                                scope.launch {
+                                    isLoading = true
 
-                                // Obtener datos de las clases DB
-                                val characterDb = CharacterDb()
-                                val locationDb = LocationDb()
 
-                                val characters = characterDb.getAllCharacters()
-                                val locations = locationDb.getAllLocations()
+                                    authRepository.login(userName.trim())
 
-                                // Convertir a entidades
-                                val characterEntities = characters.map {
-                                    CharacterEntity(
-                                        id = it.id,
-                                        name = it.name,
-                                        status = it.status,
-                                        species = it.species,
-                                        gender = it.gender,
-                                        image = it.image
-                                    )
+                                    characterRepository.syncCharacters()
+                                    locationRepository.syncLocations()
+
+                                    delay(4000)
+
+                                    isLoading = false
+                                    onStart()
                                 }
-
-                                val locationEntities = locations.map {
-                                    LocationEntity(
-                                        id = it.id,
-                                        name = it.name,
-                                        type = it.type,
-                                        dimension = it.dimension
-                                    )
-                                }
-
-                                // Insertar en Room
-                                database.characterDao().insertAll(characterEntities)
-                                database.locationDao().insertAll(locationEntities)
-
-                                // Delay de 4 segundos
-                                delay(4000)
-
-                                isLoading = false
-                                onStart()
                             }
                         },
                         shape = RoundedCornerShape(50),
                         modifier = Modifier.width(220.dp).height(48.dp),
-                        enabled = !isLoading
+                        enabled = !isLoading && userName.isNotBlank()
                     ) {
-                        Text(text = "Entrar")
+                        Text(text = "Iniciar sesión")
                     }
                 }
             }

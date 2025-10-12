@@ -2,6 +2,7 @@ package com.example.lab8moviles
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -26,6 +27,7 @@ import com.example.lab8moviles.ui.locations.LocationsScreen
 import com.example.lab8moviles.ui.locationdetail.LocationDetailScreen
 import com.example.lab8moviles.ui.profile.ProfileScreen
 import com.example.lab8moviles.ui.login.LoginScreen
+import com.example.lab8moviles.ui.splash.SplashScreen
 import com.example.lab8moviles.ui.theme.Lab8movilesTheme
 
 class MainActivity : ComponentActivity() {
@@ -46,8 +48,28 @@ class MainActivity : ComponentActivity() {
 fun AppNavHost() {
     val navController = rememberNavController()
 
-    NavHost(navController = navController, startDestination = Login) {
+    NavHost(navController = navController, startDestination = Splash) {
+        composable<Splash> {
+            SplashScreen(
+                onNavigateToLogin = {
+                    navController.navigate(Login) {
+                        popUpTo<Splash> { inclusive = true }
+                    }
+                },
+                onNavigateToHome = {
+                    navController.navigate(Characters) {
+                        popUpTo<Splash> { inclusive = true }
+                    }
+                }
+            )
+        }
+
         composable<Login> {
+            //Back para cerrar la app
+            BackHandler {
+                (navController.context as? ComponentActivity)?.finish()
+            }
+
             LoginScreen(
                 onStart = {
                     navController.navigate(Characters) {
@@ -96,6 +118,11 @@ fun MainScreen(
     val bottomNavController = rememberNavController()
     val navBackStackEntry by bottomNavController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+
+    //Back para cerrar la app desde Characters screen
+    BackHandler {
+        (navController.context as? ComponentActivity)?.finish()
+    }
 
     Scaffold(
         bottomBar = {
@@ -150,7 +177,6 @@ fun MainScreen(
         }
     }
 }
-
 
 enum class BottomNavigationItem(
     val title: String,

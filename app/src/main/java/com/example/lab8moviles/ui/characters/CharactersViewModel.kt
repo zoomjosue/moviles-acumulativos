@@ -1,8 +1,10 @@
 package com.example.lab8moviles.ui.characters
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.lab8moviles.data.CharacterDb
+import com.example.lab8moviles.data.local.AppDatabase
+import com.example.lab8moviles.data.repository.CharacterRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -10,9 +12,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlin.random.Random
 
-class CharactersViewModel : ViewModel() {
+class CharactersViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val characterDb = CharacterDb()
+    private val database = AppDatabase.getDatabase(application)
+    private val characterRepository = CharacterRepository(database.characterDao())
 
     private val _uiState = MutableStateFlow(CharactersUiState())
     val uiState: StateFlow<CharactersUiState> = _uiState.asStateFlow()
@@ -25,20 +28,28 @@ class CharactersViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = CharactersUiState(isLoading = true)
 
-            //Simular delay de 4 segundos
+            // Simular delay de 4 segundos
             delay(4000)
 
-            //Número aleatorio
+            // Número aleatorio
             val randomNumber = Random.nextInt(1, 11)
 
             if (randomNumber % 2 == 0) {
-                // Par: mostrar datos
-                val characters = characterDb.getAllCharacters()
-                _uiState.value = CharactersUiState(
-                    isLoading = false,
-                    data = characters,
-                    hasError = false
-                )
+                // Par: mostrar datos desde Room
+                try {
+                    val characters = characterRepository.getAllCharacters()
+                    _uiState.value = CharactersUiState(
+                        isLoading = false,
+                        data = characters,
+                        hasError = false
+                    )
+                } catch (e: Exception) {
+                    _uiState.value = CharactersUiState(
+                        isLoading = false,
+                        data = emptyList(),
+                        hasError = true
+                    )
+                }
             } else {
                 // Impar: mostrar error
                 _uiState.value = CharactersUiState(

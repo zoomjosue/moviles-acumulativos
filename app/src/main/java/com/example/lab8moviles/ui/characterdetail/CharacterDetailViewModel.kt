@@ -1,9 +1,11 @@
 package com.example.lab8moviles.ui.characterdetail
 
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.lab8moviles.data.CharacterDb
+import com.example.lab8moviles.data.local.AppDatabase
+import com.example.lab8moviles.data.repository.CharacterRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,10 +14,12 @@ import kotlinx.coroutines.launch
 import kotlin.random.Random
 
 class CharacterDetailViewModel(
+    application: Application,
     savedStateHandle: SavedStateHandle
-) : ViewModel() {
+) : AndroidViewModel(application) {
 
-    private val characterDb = CharacterDb()
+    private val database = AppDatabase.getDatabase(application)
+    private val characterRepository = CharacterRepository(database.characterDao())
 
     private val _uiState = MutableStateFlow(CharacterDetailUiState())
     val uiState: StateFlow<CharacterDetailUiState> = _uiState.asStateFlow()
@@ -38,14 +42,22 @@ class CharacterDetailViewModel(
             val randomNumber = Random.nextInt(1, 11)
 
             if (randomNumber % 2 == 0) {
-                // Par: mostrar datos
+                //Mostrar datos desde Room
                 try {
-                    val character = characterDb.getCharacterById(characterId)
-                    _uiState.value = CharacterDetailUiState(
-                        isLoading = false,
-                        data = character,
-                        hasError = false
-                    )
+                    val character = characterRepository.getCharacterById(characterId)
+                    if (character != null) {
+                        _uiState.value = CharacterDetailUiState(
+                            isLoading = false,
+                            data = character,
+                            hasError = false
+                        )
+                    } else {
+                        _uiState.value = CharacterDetailUiState(
+                            isLoading = false,
+                            data = null,
+                            hasError = true
+                        )
+                    }
                 } catch (e: Exception) {
                     _uiState.value = CharacterDetailUiState(
                         isLoading = false,
@@ -54,7 +66,7 @@ class CharacterDetailViewModel(
                     )
                 }
             } else {
-                // Impar: mostrar error
+                //Mostrar error
                 _uiState.value = CharacterDetailUiState(
                     isLoading = false,
                     data = null,
