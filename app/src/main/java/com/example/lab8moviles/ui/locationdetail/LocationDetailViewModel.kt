@@ -5,13 +5,12 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.example.lab8moviles.data.local.AppDatabase
+import com.example.lab8moviles.data.network.RetrofitClient
 import com.example.lab8moviles.data.repository.LocationRepository
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlin.random.Random
 
 class LocationDetailViewModel(
     application: Application,
@@ -19,12 +18,14 @@ class LocationDetailViewModel(
 ) : AndroidViewModel(application) {
 
     private val database = AppDatabase.getDatabase(application)
-    private val locationRepository = LocationRepository(database.locationDao())
+    private val locationRepository = LocationRepository(
+        locationDao = database.locationDao(),
+        apiService = RetrofitClient.apiService
+    )
 
     private val _uiState = MutableStateFlow(LocationDetailUiState())
     val uiState: StateFlow<LocationDetailUiState> = _uiState.asStateFlow()
 
-    // Obtener el ID del SavedStateHandle directamente
     private val locationId: Int = checkNotNull(savedStateHandle["locationId"])
 
     init {
@@ -35,38 +36,23 @@ class LocationDetailViewModel(
         viewModelScope.launch {
             _uiState.value = LocationDetailUiState(isLoading = true)
 
-            // Simular delay de 2 segundos
-            delay(2000)
+            try {
+                val location = locationRepository.getLocationById(locationId)
 
-            // Generar número aleatorio
-            val randomNumber = Random.nextInt(1, 11)
-
-            if (randomNumber % 2 == 0) {
-                //Mostrar datos desde Room
-                try {
-                    val location = locationRepository.getLocationById(locationId)
-                    if (location != null) {
-                        _uiState.value = LocationDetailUiState(
-                            isLoading = false,
-                            data = location,
-                            hasError = false
-                        )
-                    } else {
-                        _uiState.value = LocationDetailUiState(
-                            isLoading = false,
-                            data = null,
-                            hasError = true
-                        )
-                    }
-                } catch (e: Exception) {
+                if (location != null) {
+                    _uiState.value = LocationDetailUiState(
+                        isLoading = false,
+                        data = location,
+                        hasError = false
+                    )
+                } else {
                     _uiState.value = LocationDetailUiState(
                         isLoading = false,
                         data = null,
                         hasError = true
                     )
                 }
-            } else {
-                //Mostrar error
+            } catch (e: Exception) {
                 _uiState.value = LocationDetailUiState(
                     isLoading = false,
                     data = null,

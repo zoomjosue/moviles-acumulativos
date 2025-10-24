@@ -17,10 +17,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.lab8moviles.data.datastore.UserPreferencesManager
-import com.example.lab8moviles.data.local.AppDatabase
 import com.example.lab8moviles.data.repository.AuthRepository
-import com.example.lab8moviles.data.repository.CharacterRepository
-import com.example.lab8moviles.data.repository.LocationRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -28,11 +25,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun LoginScreen(onStart: () -> Unit, @DrawableRes logoRes: Int? = null, logoUrl: String? = null) {
     val context = LocalContext.current
-    val database = remember { AppDatabase.getDatabase(context) }
     val userPreferencesManager = remember { UserPreferencesManager(context) }
     val authRepository = remember { AuthRepository(userPreferencesManager) }
-    val characterRepository = remember { CharacterRepository(database.characterDao()) }
-    val locationRepository = remember { LocationRepository(database.locationDao()) }
 
     val scope = rememberCoroutineScope()
     var userName by remember { mutableStateOf("") }
@@ -99,7 +93,7 @@ fun LoginScreen(onStart: () -> Unit, @DrawableRes logoRes: Int? = null, logoUrl:
                 if (isLoading) {
                     CircularProgressIndicator()
                     Spacer(Modifier.height(16.dp))
-                    Text("Sincronizando datos...", style = MaterialTheme.typography.bodyMedium)
+                    Text("Iniciando sesión...", style = MaterialTheme.typography.bodyMedium)
                 } else {
                     Button(
                         onClick = {
@@ -107,13 +101,11 @@ fun LoginScreen(onStart: () -> Unit, @DrawableRes logoRes: Int? = null, logoUrl:
                                 scope.launch {
                                     isLoading = true
 
-
+                                    // Solo guardar el nombre de usuario
                                     authRepository.login(userName.trim())
 
-                                    characterRepository.syncCharacters()
-                                    locationRepository.syncLocations()
-
-                                    delay(4000)
+                                    // Pequeño delay para la UI
+                                    delay(1000)
 
                                     isLoading = false
                                     onStart()

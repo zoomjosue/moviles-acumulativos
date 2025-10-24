@@ -5,13 +5,12 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.example.lab8moviles.data.local.AppDatabase
+import com.example.lab8moviles.data.network.RetrofitClient
 import com.example.lab8moviles.data.repository.CharacterRepository
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlin.random.Random
 
 class CharacterDetailViewModel(
     application: Application,
@@ -19,12 +18,14 @@ class CharacterDetailViewModel(
 ) : AndroidViewModel(application) {
 
     private val database = AppDatabase.getDatabase(application)
-    private val characterRepository = CharacterRepository(database.characterDao())
+    private val characterRepository = CharacterRepository(
+        characterDao = database.characterDao(),
+        apiService = RetrofitClient.apiService
+    )
 
     private val _uiState = MutableStateFlow(CharacterDetailUiState())
     val uiState: StateFlow<CharacterDetailUiState> = _uiState.asStateFlow()
 
-    // Obtener el ID del SavedStateHandle directamente
     private val characterId: Int = checkNotNull(savedStateHandle["characterId"])
 
     init {
@@ -35,38 +36,23 @@ class CharacterDetailViewModel(
         viewModelScope.launch {
             _uiState.value = CharacterDetailUiState(isLoading = true)
 
-            // Simular delay de 2 segundos
-            delay(2000)
+            try {
+                val character = characterRepository.getCharacterById(characterId)
 
-            // Generar número aleatorio
-            val randomNumber = Random.nextInt(1, 11)
-
-            if (randomNumber % 2 == 0) {
-                //Mostrar datos desde Room
-                try {
-                    val character = characterRepository.getCharacterById(characterId)
-                    if (character != null) {
-                        _uiState.value = CharacterDetailUiState(
-                            isLoading = false,
-                            data = character,
-                            hasError = false
-                        )
-                    } else {
-                        _uiState.value = CharacterDetailUiState(
-                            isLoading = false,
-                            data = null,
-                            hasError = true
-                        )
-                    }
-                } catch (e: Exception) {
+                if (character != null) {
+                    _uiState.value = CharacterDetailUiState(
+                        isLoading = false,
+                        data = character,
+                        hasError = false
+                    )
+                } else {
                     _uiState.value = CharacterDetailUiState(
                         isLoading = false,
                         data = null,
                         hasError = true
                     )
                 }
-            } else {
-                //Mostrar error
+            } catch (e: Exception) {
                 _uiState.value = CharacterDetailUiState(
                     isLoading = false,
                     data = null,
